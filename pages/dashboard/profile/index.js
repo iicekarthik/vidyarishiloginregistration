@@ -12,28 +12,64 @@ import BackToTop from "@/pages/backToTop";
 import Store from "@/redux/store";
 import { Provider } from "react-redux";
 import { useEffect, useState } from "react";
+import { refreshTokenAPI } from "@/vidyarishiapi/utils/authapi";
 
 const StudentProfile = () => {
 
   const [user, setUser] = useState(null);
+  
+useEffect(() => {
+  const fetchProfile = async () => {
+    try {
+      let accessToken = localStorage.getItem("vr_access_token");
+      const refreshToken = localStorage.getItem("vr_refresh_token");
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await fetch("/api/dashboard/profileroute", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Failed to fetch profile");
-        setUser(data);
-      } catch (err) {
-        console.error(err.message);
+      // If no access token but we have refresh token → try refresh first
+      if (!accessToken && refreshToken) {
+        const refreshRes = await refreshTokenAPI();
+        if (refreshRes?.accessToken) {
+          accessToken = refreshRes.accessToken;
+        }
       }
-    };
 
-    fetchProfile();
-  }, []);
+      if (!accessToken) {
+        console.error("No valid access token found (and refresh failed).");
+        return;
+      }
+
+      // 1st attempt
+      let res = await fetch("/api/dashboard/profileroute", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      // If token expired / invalid → try refresh once and retry profile
+      if (res.status === 401 && refreshToken) {
+        const refreshRes = await refreshTokenAPI();
+
+        if (refreshRes?.accessToken) {
+          accessToken = refreshRes.accessToken;
+
+          // retry profile with new access token
+          res = await fetch("/api/dashboard/profileroute", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+        }
+      }
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || data.error || "Failed to fetch profile");
+      }
+
+      setUser(data);
+    } catch (err) {
+      console.error("Profile fetch error:", err.message);
+    }
+  };
+
+  fetchProfile();
+}, []);
 
   return (
     <>

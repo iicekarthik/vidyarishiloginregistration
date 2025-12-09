@@ -1,29 +1,34 @@
+// pages/api/auth/verify-otp.js
 import dbConnect from "@/vidyarishiapi/config/db";
 import User from "@/vidyarishiapi/models/User";
 import { isValidPhone } from "@/vidyarishiapi/utils/validators";
 import { checkOtp } from "@/vidyarishiapi/services/otp.service";
-
 import {
   generateAccessToken,
   generateRefreshToken,
 } from "@/vidyarishiapi/utils/jwt";
+import { errorHandler } from "@/vidyarishiapi/lib/errorHandler";
+import AppError from "@/vidyarishiapi/lib/AppError";
 
-export default async function handler(req, res) {
-  if (req.method !== "POST")
-    return res.status(405).json({ message: "Only POST allowed" });
+async function handler(req, res) {
+  if (req.method !== "POST") {
+    throw new AppError("Only POST allowed", 405);
+  }
 
   const { phone, otp } = req.body;
 
-  if (!isValidPhone(phone) || !otp)
-    return res.status(400).json({ message: "Phone & OTP required" });
+  if (!isValidPhone(phone) || !otp) {
+    throw new AppError("Phone & OTP required", 400);
+  }
 
   await dbConnect();
 
   // Validate OTP
   const result = await checkOtp(phone, otp);
 
-  if (!result.success)
-    return res.status(400).json({ message: result.msg });
+  if (!result.success) {
+    throw new AppError(result.msg || "OTP validation failed", 400);
+  }
 
   // Check if user exists
   const user = await User.findOne({ phone });
@@ -47,3 +52,5 @@ export default async function handler(req, res) {
     isUserExist: false,
   });
 }
+
+export default errorHandler(handler);

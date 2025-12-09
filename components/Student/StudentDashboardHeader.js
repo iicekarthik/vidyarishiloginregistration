@@ -1,7 +1,31 @@
 import Image from "next/image";
 import Link from "next/link";
+import axios from "axios";
+import { getAuthToken } from "@/vidyarishiapi/utils/authapi";
+import { useEffect, useState } from "react";
 
 const StudentDashboardHeader = () => {
+   const [studentName, setStudentName] = useState("");
+  
+    useEffect(() => {
+      const fetchUser = async () => {
+        try {
+          const token = getAuthToken();
+          if (!token) return;
+  
+          const res = await axios.get("/api/dashboard/profileroute", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+  
+          setStudentName(res.data.fullName || "User");
+        } catch (error) {
+          console.log("Error fetching user:", error);
+        }
+      };
+  
+      fetchUser();
+    }, []);
+
   return (
     <>
       <div className="rbt-dashboard-content-wrapper">
@@ -17,7 +41,7 @@ const StudentDashboardHeader = () => {
               />
             </div> */}
             <div className="tutor-content">
-              <h5 className="title">John Due</h5>
+              <h5 className="title">{studentName}</h5>
               <ul className="rbt-meta rbt-meta-white mt--5">
                 <li>
                   <i className="feather-book"></i>5 Courses Enroled

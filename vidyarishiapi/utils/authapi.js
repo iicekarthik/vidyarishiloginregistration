@@ -1,13 +1,31 @@
 // utils/authapi.js
 
-// Helper: Universal POST fetch wrapper
+// --- Helpers ---
+
+/**
+ * Get stored access token (new scheme).
+ * Falls back to old key "vr_token" if present.
+ */
+const getAccessToken = () => {
+  if (typeof window === "undefined") return null;
+
+  return (
+    localStorage.getItem("vr_access_token") ||
+    localStorage.getItem("vr_token") || // backward-compat, optional
+    null
+  );
+};
+
+/**
+ * Universal POST fetch wrapper.
+ * Optionally attaches Authorization header.
+ */
 const postAPI = async (url, body, includeAuth = false) => {
   try {
     const headers = { "Content-Type": "application/json" };
 
-    // Include token if requested
     if (includeAuth) {
-      const token = typeof window !== "undefined" ? localStorage.getItem("vr_token") : null;
+      const token = getAccessToken();
       if (token) headers["Authorization"] = `Bearer ${token}`;
     }
 
@@ -34,23 +52,31 @@ export const checkUserAPI = async (phone) => {
 
 /**
  * ➤ Verify OTP
- * Saves JWT token automatically if user exists
+ * Saves JWT tokens automatically if user exists
  *
  * @param {string} phone
  * @param {string} otp
  */
-
 export const verifyOtpAPI = async (phone, otp) => {
   const res = await postAPI("/api/auth/verify-otp", { phone, otp });
 
   if (res?.accessToken) {
+    // main storage keys
     localStorage.setItem("vr_access_token", res.accessToken);
-    localStorage.setItem("vr_refresh_token", res.refreshToken);
+    if (res?.refreshToken) {
+      localStorage.setItem("vr_refresh_token", res.refreshToken);
+    }
+
+    // optional: keep old key for backward compatibility
+    localStorage.setItem("vr_token", res.accessToken);
   }
 
   return res;
 };
 
+/**
+ * ➤ Refresh access token using refresh token
+ */
 export const refreshTokenAPI = async () => {
   const refreshToken = localStorage.getItem("vr_refresh_token");
   if (!refreshToken) return null;
@@ -58,6 +84,8 @@ export const refreshTokenAPI = async () => {
   const res = await postAPI("/api/auth/refresh-token", { refreshToken });
   if (res?.accessToken) {
     localStorage.setItem("vr_access_token", res.accessToken);
+    // keep old key in sync if you still use it anywhere
+    localStorage.setItem("vr_token", res.accessToken);
   }
   return res;
 };
@@ -72,31 +100,36 @@ export const logoutUserAPI = async () => {
 
   localStorage.removeItem("vr_access_token");
   localStorage.removeItem("vr_refresh_token");
+  localStorage.removeItem("vr_token"); // clean legacy key too
 };
 
 /**
  * ➤ Register user
- * Saves JWT token automatically after successful registration
+ * Saves JWT tokens automatically after successful registration
  *
- * @param {object} data
+ * Backend returns: { status, accessToken, refreshToken, user }
+ * (see /api/auth/register)
  */
 export const registerUserAPI = async (data) => {
   const res = await postAPI("/api/auth/register", data);
 
-  // Save token after registration
-  if (res?.token) {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("vr_token", res.token);
+  if (res?.accessToken) {
+    // new standard keys
+    localStorage.setItem("vr_access_token", res.accessToken);
+    if (res?.refreshToken) {
+      localStorage.setItem("vr_refresh_token", res.refreshToken);
     }
+
+    // legacy key for any old code
+    localStorage.setItem("vr_token", res.accessToken);
   }
 
   return res;
 };
 
 /**
- * ➤ Get logged-in user token
+ * ➤ Get logged-in user token (access token)
  */
 export const getAuthToken = () => {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem("vr_token");
+  return getAccessToken();
 };

@@ -1,15 +1,18 @@
+// pages/api/auth/register.js
 import dbConnect from "@/vidyarishiapi/config/db";
 import User from "@/vidyarishiapi/models/User";
 import { isValidEmail, isValidPhone } from "@/vidyarishiapi/utils/validators";
-
 import {
   generateAccessToken,
   generateRefreshToken,
 } from "@/vidyarishiapi/utils/jwt";
+import { errorHandler } from "@/vidyarishiapi/lib/errorHandler";
+import AppError from "@/vidyarishiapi/lib/AppError";
 
-export default async function handler(req, res) {
-  if (req.method !== "POST")
-    return res.status(405).json({ message: "Only POST allowed" });
+async function handler(req, res) {
+  if (req.method !== "POST") {
+    throw new AppError("Only POST allowed", 405);
+  }
 
   await dbConnect();
 
@@ -26,12 +29,15 @@ export default async function handler(req, res) {
     whatsapp,
   } = req.body;
 
-  if (!isValidPhone(phone) || !fullName || !isValidEmail(email))
-    return res.status(400).json({ message: "Missing required fields" });
+  if (!isValidPhone(phone) || !fullName || !isValidEmail(email)) {
+    throw new AppError("Missing or invalid required fields", 400);
+  }
 
   // Check duplicate
   const exists = await User.findOne({ phone });
-  if (exists) return res.status(400).json({ message: "User already exists" });
+  if (exists) {
+    throw new AppError("User already exists", 400);
+  }
 
   // Create user
   const user = await User.create({
@@ -59,3 +65,5 @@ export default async function handler(req, res) {
     user,
   });
 }
+
+export default errorHandler(handler);

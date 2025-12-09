@@ -1,27 +1,41 @@
+// pages/api/dashboard/profileroute.js
+
 import dbConnect from "@/vidyarishiapi/config/db";
 import User from "@/vidyarishiapi/models/User";
 import { verifyAccessToken } from "@/vidyarishiapi/utils/jwt";
+import { errorHandler } from "@/vidyarishiapi/lib/errorHandler";
+import AppError from "@/vidyarishiapi/lib/AppError";
 
-export async function GET(req) {
+async function handler(req, res) {
+  // Only GET allowed for this endpoint
+  if (req.method !== "GET") {
+    throw new AppError("Only GET allowed", 405);
+  }
+
   await dbConnect();
 
-  try {
-    const token = req.headers.get("authorization")?.split(" ")[1];
-    if (!token)
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+  // Read Bearer token from header
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.split(" ")[1];
 
-    const decoded = verifyAccessToken(token);
-    if (!decoded?.id)
-      return new Response(JSON.stringify({ error: "Invalid or expired token" }), { status: 401 });
-
-    const user = await User.findById(decoded.id).lean();
-    if (!user)
-      return new Response(JSON.stringify({ error: "User not found" }), { status: 404 });
-
-
-    return new Response(JSON.stringify(safeUser), { status: 200 });
-  } catch (err) {
-    console.error("Profile API error:", err);
-    return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500 });
+  if (!token) {
+    throw new AppError("Unauthorized", 401);
   }
+
+  const decoded = verifyAccessToken(token);
+  if (!decoded?.id) {
+    throw new AppError("Invalid or expired token", 401);
+  }
+
+  const user = await User.findById(decoded.id).lean();
+  if (!user) {
+    throw new AppError("User not found", 404);
+  }
+
+  // remove sensitive fields if any
+  const { password, __v, ...safeUser } = user;
+
+  return res.status(200).json(safeUser);
 }
+
+export default errorHandler(handler);

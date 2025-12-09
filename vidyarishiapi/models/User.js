@@ -14,7 +14,15 @@ const userSchema = new mongoose.Schema(
     course: { type: String },
 
     whatsapp: { type: Boolean, default: false },
+
+    skill: { type: String},
     biography: { type: String },
+
+    facebook: { type: String },
+    twitter: { type: String },
+    linkedin: { type: String },
+    website: { type: String },
+    github: { type: String },
 
     isPhoneNumberVerified: { type: Boolean, default: false },
     isEmailVerified: { type: Boolean, default: false },

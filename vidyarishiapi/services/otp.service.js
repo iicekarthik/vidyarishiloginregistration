@@ -1,4 +1,4 @@
-import otpStore from "./otp.store";
+import otpStore from "@/vidyarishiapi/store/otp.store"
 import { sendSMS } from "./sms.service";
 import otpGenerator from "otp-generator";
 
