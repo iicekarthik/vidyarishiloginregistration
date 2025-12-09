@@ -49,13 +49,15 @@ const Setting = () => {
 
         setBio(data.biography || "");
 
-        setSocialLinks({
-          facebook: data.facebook || "",
-          twitter: data.twitter || "",
-          linkedin: data.linkedin || "",
-          website: data.website || "",
-          github: data.github || "",
-        });
+       
+      setSocialLinks({
+        facebook: data.user.facebook || "",
+        twitter: data.user.twitter || "",
+        linkedin: data.user.linkedin || "",
+        website: data.user.website || "",
+        github: data.user.github || "",
+      });
+
       } catch (err) {
         console.error("Fetch user error:", err);
       } finally {
@@ -83,11 +85,11 @@ const Setting = () => {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-        firstName,
-        lastName,
-        phone: user.phone,
-        skill: user.skill,
-        biography: bio,
+          firstName,
+          lastName,
+          phone: user.phone,
+          skill: user.skill,
+          biography: bio,
         }),
       });
 
@@ -130,16 +132,24 @@ const Setting = () => {
 
       const data = await res.json();
 
-      if (data.status === "success") {
-        alert("Social links updated successfully!");
-      } else {
-        alert(data.message || "Update failed");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Update failed");
+    if (data.status === "success") {
+      setSocialLinks({
+        facebook: data.user.facebook || "",
+        twitter: data.user.twitter || "",
+        linkedin: data.user.linkedin || "",
+        website: data.user.website || "",
+        github: data.user.github || "",
+      });
+
+      alert("Social links updated successfully!");
+    } else {
+      alert(data.message || "Update failed");
     }
-  };
+  } catch (err) {
+    console.error(err);
+    alert("Update failed");
+  }
+};
 
   if (loading) return <p>Loading...</p>;
   if (!user)

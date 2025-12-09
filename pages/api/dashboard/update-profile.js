@@ -22,12 +22,6 @@ async function handler(req, res) {
     firstName,
     lastName,
     phone,
-    gender,
-    dob,
-    qualification,
-    state,
-    city,
-    course,
     skill,
     biography,
     facebook,
@@ -37,27 +31,22 @@ async function handler(req, res) {
     github,
   } = req.body;
 
-  const fullName = `${firstName || ""} ${lastName || ""}`.trim();
 
-  const update = {
-    ...(fullName && { fullName }),
-    ...(phone && { phone }),
-    ...(gender && { gender }),
-    ...(dob && { dob }),
-    ...(qualification && { qualification }),
-    ...(state && { state }),
-    ...(city && { city }),
-    ...(course && { course }),
+  const update = {};
 
-    skill: skill ?? "",
-    biography: biography ?? "",
+  if (firstName !== undefined || lastName !== undefined) {
+    const fullName = `${firstName || ""} ${lastName || ""}`.trim();
+    if (fullName) update.fullName = fullName;
+  }
 
-    facebook: facebook ?? "",
-    twitter: twitter ?? "",
-    linkedin: linkedin ?? "",
-    website: website ?? "",
-    github: github ?? "",
-  };
+  if (phone !== undefined) update.phone = phone;
+  if (skill !== undefined) update.skill = skill;
+  if (biography !== undefined) update.biography = biography;
+  if (facebook !== undefined) update.facebook = facebook;
+  if (twitter !== undefined) update.twitter = twitter;
+  if (linkedin !== undefined) update.linkedin = linkedin;
+  if (website !== undefined) update.website = website;
+  if (github !== undefined) update.github = github;
 
   const user = await User.findByIdAndUpdate(decoded.id, update, { new: true });
 

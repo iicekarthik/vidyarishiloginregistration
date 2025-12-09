@@ -6,7 +6,7 @@ export const generateAccessToken = (user) => {
   return jwt.sign(
     { id: user._id, phone: user.phone },
     process.env.JWT_SECRET,
-    { expiresIn: "15m" } // short lived
+    { expiresIn: "20m" } // short lived
   );
 };
 
