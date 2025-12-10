@@ -26,7 +26,7 @@ export const responseHandler = (fn) => {
     try {
       return await fn(req);
     } catch (err) {
-      console.error("🔥 Global Error Handler (app router):", err);
+      console.error("Global Error Handler (app router):", err);
 
       const statusCode = err.statusCode || 500;
       const message = err.message || "Internal Server Error";

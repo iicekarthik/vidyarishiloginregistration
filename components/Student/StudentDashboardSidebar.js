@@ -1,9 +1,8 @@
-
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import SidebarData from "@/data/dashboard/student/student-sidebar.json";
 import axios from "axios";
-import { getAuthToken } from "@/vidyarishiapi/utils/authapi";
+import { logoutUserAPI } from "@/vidyarishiapi/utils/authapi";
 
 const StudentDashboardSidebar = () => {
   const router = useRouter();
@@ -13,11 +12,8 @@ const StudentDashboardSidebar = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const token = getAuthToken();
-        if (!token) return;
-
         const res = await axios.get("/api/dashboard/profileroute", {
-          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
         });
 
         setStudentName(res.data.fullName || "User");
@@ -29,6 +25,17 @@ const StudentDashboardSidebar = () => {
     fetchUser();
   }, []);
 
+const handleLogout = async () => {
+  try {
+    await logoutUserAPI();
+
+    router.replace("/");
+  } catch (err) {
+    console.error("Logout failed", err);
+  }
+};
+
+
   return (
     <>
       <div className="rbt-default-sidebar sticky-top rbt-shadow-box rbt-gradient-border">
@@ -38,6 +45,8 @@ const StudentDashboardSidebar = () => {
               <div className="section-title mb--20">
                 <h6 className="rbt-title-style-2">Welcome, {studentName}</h6>
               </div>
+
+              {/* MAIN MENU (Dashboard, Profile, etc.) */}
               <nav className="mainmenu-nav">
                 <ul className="dashboard-mainmenu rbt-default-sidebar-list">
                   {SidebarData &&
@@ -59,18 +68,37 @@ const StudentDashboardSidebar = () => {
                 <h6 className="rbt-title-style-2">User</h6>
               </div>
 
+              {/* USER SECTION (Settings + Logout) */}
               <nav className="mainmenu-nav">
                 <ul className="dashboard-mainmenu rbt-default-sidebar-list">
                   {SidebarData &&
                     SidebarData.siderbar.slice(7, 10).map((data, index) => (
                       <li key={index}>
-                        <a
-                          href={data.link}
-                          className={`${path === data.link ? "active" : ""}`}
-                        >
-                          <i className={data.icon} />
-                          <span>{data.text}</span>
-                        </a>
+                        {data.action === "logout" ? (
+                          <button
+                            onClick={handleLogout}
+                            className="logout-btn"
+                            style={{
+                              background: "none",
+                              border: "none",
+                              padding: 0,
+                              cursor: "pointer",
+                              width: "100%",
+                              textAlign: "left",
+                            }}
+                          >
+                            <i className={data.icon} />
+                            <span>{data.text}</span>
+                          </button>
+                        ) : (
+                          <a
+                            href={data.link}
+                            className={`${path === data.link ? "active" : ""}`}
+                          >
+                            <i className={data.icon} />
+                            <span>{data.text}</span>
+                          </a>
+                        )}
                       </li>
                     ))}
                 </ul>

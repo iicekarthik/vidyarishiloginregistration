@@ -1,59 +1,84 @@
 import Link from "next/link";
-import Courses from "../../data/dashboard/instructor/instructor.json";
-import CourseWidgets from "../Instructor/Dashboard-Section/widgets/CourseWidget";
+import { useEffect, useState } from "react";
+import api from "@/vidyarishiapi/lib/axios";
+import CourseWidget from "../Instructor/Dashboard-Section/widgets/CourseWidget";
 
 const EnrolledCourses = () => {
+  const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const fetchCourses = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get("/api/dashboard/student/enrolled-courses");
+
+      if (Array.isArray(res.data)) {
+        setCourses(res.data);
+      } else {
+        setCourses([]);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load courses");
+      setCourses([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCourses();
+  }, []);
+
+  const enrolled = courses.filter((c) => c.status === "enrolled");
+  const active = courses.filter((c) => c.status === "active");
+  const completed = courses.filter((c) => c.status === "completed");
+
   return (
     <>
+      {loading && <p>Loading...</p>}
+      {error && <p style={{ color: "red" }}>{error}</p>}
+
       <div className="rbt-dashboard-content bg-color-white rbt-shadow-box">
         <div className="content">
           <div className="section-title">
             <h4 className="rbt-title-style-3">Enrolled Courses</h4>
           </div>
+
+          {/* TABS */}
           <div className="advance-tab-button mb--30">
             <ul
               className="nav nav-tabs tab-button-style-2 justify-content-start"
-              id="myTab-4"
               role="tablist"
             >
               <li role="presentation">
                 <Link
                   href="#"
                   className="tab-button active"
-                  id="home-tab-4"
                   data-bs-toggle="tab"
-                  data-bs-target="#home-4"
-                  role="tab"
-                  aria-controls="home-4"
-                  aria-selected="true"
+                  data-bs-target="#enrolled"
                 >
                   <span className="title">Enrolled Courses</span>
                 </Link>
               </li>
+
               <li role="presentation">
                 <Link
                   href="#"
                   className="tab-button"
-                  id="profile-tab-4"
                   data-bs-toggle="tab"
-                  data-bs-target="#profile-4"
-                  role="tab"
-                  aria-controls="profile-4"
-                  aria-selected="false"
+                  data-bs-target="#active"
                 >
                   <span className="title">Active Courses</span>
                 </Link>
               </li>
+
               <li role="presentation">
                 <Link
                   href="#"
                   className="tab-button"
-                  id="contact-tab-4"
                   data-bs-toggle="tab"
-                  data-bs-target="#contact-4"
-                  role="tab"
-                  aria-controls="contact-4"
-                  aria-selected="false"
+                  data-bs-target="#completed"
                 >
                   <span className="title">Completed Courses</span>
                 </Link>
@@ -61,79 +86,53 @@ const EnrolledCourses = () => {
             </ul>
           </div>
 
+          {/* TAB CONTENT */}
           <div className="tab-content">
-            <div
-              className="tab-pane fade active show"
-              id="home-4"
-              role="tabpanel"
-              aria-labelledby="home-tab-4"
-            >
+            {/* ENROLLED */}
+            <div className="tab-pane fade active show" id="enrolled">
               <div className="row g-5">
-                {Courses.slice(0, 3)?.map((slide, index) => (
-                  <div
-                    className="col-lg-4 col-md-6 col-12"
-                    key={`course-enrolled-${index}`}
-                  >
-                    <CourseWidgets
-                      data={slide}
+                {enrolled.length === 0 && <p>No enrolled courses yet.</p>}
+                {enrolled.map((course, i) => (
+                  <div key={i} className="col-lg-4 col-md-6 col-12">
+                    <CourseWidget
+                      data={course}
                       courseStyle="two"
                       isProgress={true}
                       isCompleted={false}
-                      isEdit={false}
-                      showDescription={false}
-                      showAuthor={false}
                     />
                   </div>
                 ))}
               </div>
             </div>
 
-            <div
-              className="tab-pane fade"
-              id="profile-4"
-              role="tabpanel"
-              aria-labelledby="profile-tab-4"
-            >
+            {/* ACTIVE */}
+            <div className="tab-pane fade" id="active">
               <div className="row g-5">
-                {Courses.slice(3, 6)?.map((slide, index) => (
-                  <div
-                    className="col-lg-4 col-md-6 col-12"
-                    key={`course-active-${index}`}
-                  >
-                    <CourseWidgets
-                      data={slide}
+                {active.length === 0 && <p>No active courses.</p>}
+                {active.map((course, i) => (
+                  <div key={i} className="col-lg-4 col-md-6 col-12">
+                    <CourseWidget
+                      data={course}
                       courseStyle="two"
+                      isProgress={true}
                       isCompleted={false}
-                      isProgress={false}
-                      isEdit={false}
-                      showDescription={false}
-                      showAuthor={false}
                     />
                   </div>
                 ))}
               </div>
             </div>
 
-            <div
-              className="tab-pane fade"
-              id="contact-4"
-              role="tabpanel"
-              aria-labelledby="contact-tab-4"
-            >
+            {/* COMPLETED */}
+            <div className="tab-pane fade" id="completed">
               <div className="row g-5">
-                {Courses.slice(1, 4)?.map((slide, index) => (
-                  <div
-                    className="col-lg-4 col-md-6 col-12"
-                    key={`course-completed-${index}`}
-                  >
-                    <CourseWidgets
-                      data={slide}
+                {completed.length === 0 && <p>No completed courses.</p>}
+                {completed.map((course, i) => (
+                  <div key={i} className="col-lg-4 col-md-6 col-12">
+                    <CourseWidget
+                      data={course}
                       courseStyle="two"
+                      isProgress={true}
                       isCompleted={true}
-                      isProgress={true}
-                      showDescription={false}
-                      isEdit={false}
-                      showAuthor={false}
                     />
                   </div>
                 ))}

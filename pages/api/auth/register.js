@@ -1,13 +1,20 @@
 // pages/api/auth/register.js
+
 import dbConnect from "@/vidyarishiapi/config/db";
 import User from "@/vidyarishiapi/models/User";
-import { isValidEmail, isValidPhone } from "@/vidyarishiapi/utils/validators";
 import {
   generateAccessToken,
   generateRefreshToken,
 } from "@/vidyarishiapi/utils/jwt";
 import { errorHandler } from "@/vidyarishiapi/lib/errorHandler";
 import AppError from "@/vidyarishiapi/lib/AppError";
+
+const isProd = process.env.NODE_ENV === "production";
+
+const setCookie = (name, token, maxAge) =>
+  `${name}=${token}; Max-Age=${maxAge}; HttpOnly; Path=/; ${
+    isProd ? "SameSite=None; Secure" : "SameSite=Lax"
+  }`;
 
 async function handler(req, res) {
   if (req.method !== "POST") {
@@ -29,18 +36,17 @@ async function handler(req, res) {
     whatsapp,
   } = req.body;
 
-  if (!isValidPhone(phone) || !fullName || !isValidEmail(email)) {
-    throw new AppError("Missing or invalid required fields", 400);
+  if (!phone || !fullName || !email) {
+    throw new AppError("Missing required fields", 400);
   }
 
-  // Check duplicate
-  const exists = await User.findOne({ phone });
-  if (exists) {
+  const existingUser = await User.findOne({ phone });
+  if (existingUser) {
     throw new AppError("User already exists", 400);
   }
 
-  // Create user
-  const user = await User.create({
+  // Create User
+  const newUser = await User.create({
     phone,
     fullName,
     email,
@@ -51,18 +57,24 @@ async function handler(req, res) {
     city,
     course,
     whatsapp,
-    isPhoneNumberVerified: true,
   });
 
-  // NEW TOKEN SYSTEM
-  const accessToken = generateAccessToken(user);
-  const refreshToken = await generateRefreshToken(user);
+  // Generate tokens
+const accessToken = generateAccessToken(newUser);
+
+// FIXED: pass full newUser object
+const refreshToken = await generateRefreshToken(newUser);
+
+  // Set HttpOnly cookies
+  res.setHeader("Set-Cookie", [
+    setCookie("accessToken", accessToken, 1200),
+    setCookie("refreshToken", refreshToken, 60 * 60 * 24 * 7),
+  ]);
 
   return res.status(201).json({
     status: "success",
-    accessToken,
-    refreshToken,
-    user,
+    message: "Registration successful",
+    userId: newUser,
   });
 }
 

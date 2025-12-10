@@ -5,26 +5,24 @@ import { getAuthToken } from "@/vidyarishiapi/utils/authapi";
 import { useEffect, useState } from "react";
 
 const StudentDashboardHeader = () => {
-   const [studentName, setStudentName] = useState("");
-  
-    useEffect(() => {
-      const fetchUser = async () => {
-        try {
-          const token = getAuthToken();
-          if (!token) return;
-  
-          const res = await axios.get("/api/dashboard/profileroute", {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-  
-          setStudentName(res.data.fullName || "User");
-        } catch (error) {
-          console.log("Error fetching user:", error);
-        }
-      };
-  
-      fetchUser();
-    }, []);
+  const [studentName, setStudentName] = useState("");
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const res = await axios.get("/api/dashboard/profileroute", {
+          withCredentials: true,
+        });
+
+
+        setStudentName(res.data.fullName || "User");
+      } catch (error) {
+        console.log("Error fetching user:", error);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   return (
     <>

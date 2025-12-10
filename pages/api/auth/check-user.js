@@ -20,4 +20,5 @@ async function handler(req, res) {
   return res.status(200).json({ exists: !!user, otpSent: true });
 }
 
+
 export default errorHandler(handler);

@@ -1,4 +1,3 @@
-// pages/api/auth/verify-otp.js
 import dbConnect from "@/vidyarishiapi/config/db";
 import User from "@/vidyarishiapi/models/User";
 import { isValidPhone } from "@/vidyarishiapi/utils/validators";
@@ -10,43 +9,50 @@ import {
 import { errorHandler } from "@/vidyarishiapi/lib/errorHandler";
 import AppError from "@/vidyarishiapi/lib/AppError";
 
+const isProd = process.env.NODE_ENV === "production";
+
+const accessTokenCookie = token =>
+  `accessToken=${token}; Max-Age=1200; HttpOnly; Path=/; ${
+    isProd ? "SameSite=None; Secure" : "SameSite=Lax"
+  }`;
+
+const refreshTokenCookie = token =>
+  `refreshToken=${token}; Max-Age=604800; HttpOnly; Path=/; ${
+    isProd ? "SameSite=None; Secure" : "SameSite=Lax"
+  }`;
+
 async function handler(req, res) {
-  if (req.method !== "POST") {
-    throw new AppError("Only POST allowed", 405);
-  }
+  if (req.method !== "POST") throw new AppError("Only POST allowed", 405);
 
   const { phone, otp } = req.body;
-
   if (!isValidPhone(phone) || !otp) {
     throw new AppError("Phone & OTP required", 400);
   }
 
   await dbConnect();
 
-  // Validate OTP
   const result = await checkOtp(phone, otp);
+  if (!result.success) throw new AppError("OTP validation failed", 400);
 
-  if (!result.success) {
-    throw new AppError(result.msg || "OTP validation failed", 400);
-  }
-
-  // Check if user exists
   const user = await User.findOne({ phone });
 
-  // If user exists → Login
+  // LOGIN FLOW
   if (user) {
     const accessToken = generateAccessToken(user);
     const refreshToken = await generateRefreshToken(user);
 
+    res.setHeader("Set-Cookie", [
+      accessTokenCookie(accessToken),
+      refreshTokenCookie(refreshToken),
+    ]);
+
     return res.status(200).json({
       status: "login_success",
       isUserExist: true,
-      accessToken,
-      refreshToken,
+      user,
     });
   }
 
-  // If user is new → Continue registration
   return res.status(200).json({
     status: "continue_registration",
     isUserExist: false,

@@ -12,64 +12,33 @@ import BackToTop from "@/pages/backToTop";
 import Store from "@/redux/store";
 import { Provider } from "react-redux";
 import { useEffect, useState } from "react";
-import { refreshTokenAPI } from "@/vidyarishiapi/utils/authapi";
 
 const StudentProfile = () => {
-
   const [user, setUser] = useState(null);
-  
-useEffect(() => {
-  const fetchProfile = async () => {
-    try {
-      let accessToken = localStorage.getItem("vr_access_token");
-      const refreshToken = localStorage.getItem("vr_refresh_token");
 
-      // If no access token but we have refresh token → try refresh first
-      if (!accessToken && refreshToken) {
-        const refreshRes = await refreshTokenAPI();
-        if (refreshRes?.accessToken) {
-          accessToken = refreshRes.accessToken;
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        // 🔥 NEW — Cookies are sent automatically
+        const res = await fetch("/api/dashboard/profileroute", {
+          method: "GET",
+          credentials: "include", // MOST IMPORTANT for HttpOnly cookies
+        });
+
+        if (!res.ok) {
+          console.error("Profile fetch failed:", res.status);
+          return;
         }
+
+        const data = await res.json();
+        setUser(data);
+      } catch (err) {
+        console.error("Profile fetch error:", err.message);
       }
+    };
 
-      if (!accessToken) {
-        console.error("No valid access token found (and refresh failed).");
-        return;
-      }
-
-      // 1st attempt
-      let res = await fetch("/api/dashboard/profileroute", {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-
-      // If token expired / invalid → try refresh once and retry profile
-      if (res.status === 401 && refreshToken) {
-        const refreshRes = await refreshTokenAPI();
-
-        if (refreshRes?.accessToken) {
-          accessToken = refreshRes.accessToken;
-
-          // retry profile with new access token
-          res = await fetch("/api/dashboard/profileroute", {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
-        }
-      }
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || data.error || "Failed to fetch profile");
-      }
-
-      setUser(data);
-    } catch (err) {
-      console.error("Profile fetch error:", err.message);
-    }
-  };
-
-  fetchProfile();
-}, []);
+    fetchProfile();
+  }, []);
 
   return (
     <>
@@ -84,6 +53,7 @@ useEffect(() => {
           <div className="rbt-page-banner-wrapper">
             <div className="rbt-banner-image" />
           </div>
+
           <div className="rbt-dashboard-area rbt-section-overlayping-top rbt-section-gapBottom">
             <div className="container">
               <div className="row">
@@ -96,7 +66,7 @@ useEffect(() => {
                     </div>
 
                     <div className="col-lg-9">
-                     <Profile user={user} />
+                      <Profile user={user} />
                     </div>
                   </div>
                 </div>

@@ -4,53 +4,35 @@ import cookie from "cookie";
 
 export const authMiddleware = (handler) => {
   return async (req, res) => {
-    try {
-      await dbConnect();
+    await dbConnect();
 
-      // Parse cookies
-      const cookies = req.headers.cookie
-        ? cookie.parse(req.headers.cookie)
-        : {};
+    const cookies = req.headers.cookie ? cookie.parse(req.headers.cookie) : {};
+    const accessToken = cookies.accessToken;
+    const refreshToken = cookies.refreshToken;
 
-      const authHeader = req.headers.authorization;
-      const accessToken = authHeader?.startsWith("Bearer ")
-        ? authHeader.split(" ")[1]
-        : null;
+    let user = accessToken ? verifyAccessToken(accessToken) : null;
 
-      if (!accessToken) {
-        return res.status(401).json({ message: "No access token provided" });
+    if (!user && refreshToken) {
+      const payload = await verifyRefreshToken(refreshToken);
+      if (!payload) {
+        return res.status(401).json({ message: "Unauthorized" });
       }
 
-      // Try verifying access token
-      let user = verifyAccessToken(accessToken);
+      const newAccess = generateAccessToken({ _id: payload.id });
 
-      // If access token expired → use refresh
-      if (!user) {
-        const refreshToken = cookies.refreshToken;
+      res.setHeader(
+        "Set-Cookie",
+        `accessToken=${newAccess}; Max-Age=1200; Path=/; HttpOnly; SameSite=Strict`
+      );
 
-        if (!refreshToken) {
-          return res.status(401).json({ message: "Token expired. Login again." });
-        }
-
-        const refreshPayload = await verifyRefreshToken(refreshToken);
-
-        if (!refreshPayload) {
-          return res.status(401).json({ message: "Invalid refresh token" });
-        }
-
-        // Generate new access token
-        const newAccessToken = generateAccessToken({ _id: refreshPayload.id });
-
-        res.setHeader("x-access-token", newAccessToken);
-        user = { id: refreshPayload.id };
-      }
-
-      req.user = user;
-      return handler(req, res);
-
-    } catch (err) {
-      console.error("AUTH MIDDLEWARE ERROR", err);
-      return res.status(500).json({ message: "Authentication error" });
+      user = { id: payload.id };
     }
+
+    if (!user) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    req.user = user;
+    return handler(req, res);
   };
 };

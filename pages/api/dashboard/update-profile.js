@@ -1,20 +1,49 @@
+// pages/api/dashboard/update-profile.js
+
 import dbConnect from "@/vidyarishiapi/config/db";
 import User from "@/vidyarishiapi/models/User";
-import { verifyAccessToken } from "@/vidyarishiapi/utils/jwt";
+import {
+  verifyAccessToken,
+  verifyRefreshToken,
+  generateAccessToken,
+} from "@/vidyarishiapi/utils/jwt";
 import { errorHandler } from "@/vidyarishiapi/lib/errorHandler";
 import AppError from "@/vidyarishiapi/lib/AppError";
+import { parse } from "cookie";
 
 async function handler(req, res) {
   if (req.method !== "POST") {
     throw new AppError("Only POST allowed", 405);
   }
 
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.split(" ")[1];
-  if (!token) throw new AppError("Unauthorized", 401);
+  // Parse cookies
+ const cookies = req.headers.cookie ? parse(req.headers.cookie) : {};
+  const accessToken = cookies.accessToken;
+  const refreshToken = cookies.refreshToken;
 
-  const decoded = verifyAccessToken(token);
-  if (!decoded?.id) throw new AppError("Invalid or expired token", 401);
+  // 1️⃣ Validate access token
+  let userPayload = accessToken ? verifyAccessToken(accessToken) : null;
+
+  // 2️⃣ If expired → try refresh token
+  if (!userPayload && refreshToken) {
+    const refreshPayload = await verifyRefreshToken(refreshToken);
+
+    if (!refreshPayload) throw new AppError("Unauthorized", 401);
+
+    const newAccessToken = generateAccessToken({ _id: refreshPayload.id });
+
+    // Set new cookie
+    res.setHeader(
+      "Set-Cookie",
+      `accessToken=${newAccessToken}; Max-Age=1200; httpOnly; sameSite=strict`
+    );
+
+    userPayload = { id: refreshPayload.id };
+  }
+
+  if (!userPayload?.id) {
+    throw new AppError("Unauthorized", 401);
+  }
 
   await dbConnect();
 
@@ -30,7 +59,6 @@ async function handler(req, res) {
     website,
     github,
   } = req.body;
-
 
   const update = {};
 
@@ -48,8 +76,7 @@ async function handler(req, res) {
   if (website !== undefined) update.website = website;
   if (github !== undefined) update.github = github;
 
-  const user = await User.findByIdAndUpdate(decoded.id, update, { new: true });
-
+  const user = await User.findByIdAndUpdate(userPayload.id, update, { new: true }).lean();
   if (!user) throw new AppError("User not found", 404);
 
   return res.status(200).json({ status: "success", user });

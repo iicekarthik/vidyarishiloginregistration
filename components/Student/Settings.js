@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { getAuthToken } from "@/vidyarishiapi/utils/authapi";
 
 
 const Setting = () => {
@@ -21,15 +20,10 @@ const Setting = () => {
   // Fetch user on mount
   useEffect(() => {
     const fetchUser = async () => {
-      const token = getAuthToken();
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
       try {
         const res = await fetch("/api/dashboard/profileroute", {
-          headers: { Authorization: `Bearer ${token}` },
+          method: "GET",
+          credentials: "include",
         });
 
         const data = await res.json();
@@ -40,7 +34,7 @@ const Setting = () => {
           return;
         }
 
-        // Fix: properly restore all values including skill
+        // restore values
         setUser({
           ...data,
           skill: data.skill || "",
@@ -49,14 +43,13 @@ const Setting = () => {
 
         setBio(data.biography || "");
 
-       
-      setSocialLinks({
-        facebook: data.user.facebook || "",
-        twitter: data.user.twitter || "",
-        linkedin: data.user.linkedin || "",
-        website: data.user.website || "",
-        github: data.user.github || "",
-      });
+        setSocialLinks({
+          facebook: data.facebook || "",
+          twitter: data.twitter || "",
+          linkedin: data.linkedin || "",
+          website: data.website || "",
+          github: data.github || "",
+        });
 
       } catch (err) {
         console.error("Fetch user error:", err);
@@ -68,11 +61,10 @@ const Setting = () => {
     fetchUser();
   }, []);
 
+
   // Update profile (name, phone, bio, skill)
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
-    const token = getAuthToken();
-    if (!token) return alert("Login required");
     if (!user) return;
 
     const [firstName = "", lastName = ""] = (user.fullName || "").split(" ");
@@ -80,10 +72,8 @@ const Setting = () => {
     try {
       const res = await fetch("/api/dashboard/update-profile", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           firstName,
           lastName,
@@ -103,7 +93,6 @@ const Setting = () => {
         });
 
         setBio(data.user.biography || "");
-
         alert("Profile updated successfully!");
       } else {
         alert(data.message || "Update failed");
@@ -114,42 +103,39 @@ const Setting = () => {
     }
   };
 
-  // Update social links (reuse same endpoint)
+
+  // Update social links
   const handleUpdateSocial = async (e) => {
     e.preventDefault();
-    const token = getAuthToken();
-    if (!token) return alert("Login required");
 
     try {
       const res = await fetch("/api/dashboard/update-profile", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(socialLinks),
       });
 
       const data = await res.json();
 
-    if (data.status === "success") {
-      setSocialLinks({
-        facebook: data.user.facebook || "",
-        twitter: data.user.twitter || "",
-        linkedin: data.user.linkedin || "",
-        website: data.user.website || "",
-        github: data.user.github || "",
-      });
+      if (data.status === "success") {
+        setSocialLinks({
+          facebook: data.user?.facebook || "",
+          twitter: data.user?.twitter || "",
+          linkedin: data.user?.linkedin || "",
+          website: data.user?.website || "",
+          github: data.user?.github || "",
+        });
 
-      alert("Social links updated successfully!");
-    } else {
-      alert(data.message || "Update failed");
+        alert("Social links updated successfully!");
+      } else {
+        alert(data.message || "Update failed");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Update failed");
     }
-  } catch (err) {
-    console.error(err);
-    alert("Update failed");
-  }
-};
+  };
 
   if (loading) return <p>Loading...</p>;
   if (!user)
