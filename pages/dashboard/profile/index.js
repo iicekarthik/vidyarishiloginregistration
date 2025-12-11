@@ -19,26 +19,27 @@ const StudentProfile = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        // 🔥 NEW — Cookies are sent automatically
-        const res = await fetch("/api/dashboard/profileroute", {
+
+        const res = await fetch("/api/dashboard/profile/profileroute", {
           method: "GET",
-          credentials: "include", // MOST IMPORTANT for HttpOnly cookies
+          credentials: "include", // browser cookies (HttpOnly tokens) automatically send karta hai
         });
 
-        if (!res.ok) {
+        if (!res.ok) {              //Agar backend ne error code bheja (401, 500, 404) → console me error
           console.error("Profile fetch failed:", res.status);
           return;
         }
 
+        // JSON data ko React state me daal diya → UI updated
         const data = await res.json();
         setUser(data);
-      } catch (err) {
+      } catch (err) {                        //Agar API call fail ho jaye (network error etc)
         console.error("Profile fetch error:", err.message);
       }
     };
 
     fetchProfile();
-  }, []);
+  }, []);      //[] ensures ye effect sirf component load hone per chale.
 
   return (
     <>

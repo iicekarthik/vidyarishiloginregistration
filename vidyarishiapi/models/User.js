@@ -8,10 +8,10 @@ const userSchema = new mongoose.Schema(
 
     dob: { type: Date },
     gender: { type: String },
-    qualification: { type: String },
+    qualification: { type: String, required: true },
     state: { type: String },
     city: { type: String },
-    course: { type: String },
+    course: { type: String, required: true },
 
     whatsapp: { type: Boolean, default: false },
 

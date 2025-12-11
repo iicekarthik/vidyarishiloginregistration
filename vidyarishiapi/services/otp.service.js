@@ -14,6 +14,7 @@ export const createOtp = async (phone) => {
 
   const expiresAt = Date.now() + 30 * 1000; 
 
+// OTP memory store me save ho gaya
   otpStore.set(phone, { otp, expiresAt });
 
   await sendSMS(phone, `Your VidyaRishi OTP is ${otp}`);
@@ -30,6 +31,7 @@ export const checkOtp = async (phone, otp) => {
     return { success: false, msg: "OTP expired" };
   }
 
+  // OTP memory store me save ho gaya
   if (record.otp !== otp) return { success: false, msg: "OTP invalid" };
 
   otpStore.delete(phone); 

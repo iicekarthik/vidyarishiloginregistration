@@ -7,6 +7,7 @@ import {
 } from "@/vidyarishiapi/utils/jwt";
 import {parse} from "cookie";
 import AppError from "@/vidyarishiapi/lib/AppError";
+import cookie from "cookie";
 
 export default async function handler(req, res) {
   await dbConnect();

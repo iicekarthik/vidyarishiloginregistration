@@ -21,19 +21,10 @@ const Wishlist = () => {
     fetchWishlist();
   }, []);
 
-  const removeFromWishlist = async (courseId) => {
-    try {
-      await api.delete("/api/dashboard/wishlist", {
-        data: { courseId },
-      });
-
-      setCourses((prev) =>
-        prev.filter((course) => course.courseId !== courseId)
-      );
-    } catch (error) {
-      console.error("Remove wishlist error:", error);
-    }
+  const removeFromUI = (courseId) => {
+    setCourses(prev => prev.filter(c => c.courseId !== courseId));
   };
+
 
   return (
     <div className="rbt-dashboard-content bg-color-white rbt-shadow-box">
@@ -62,14 +53,15 @@ const Wishlist = () => {
                 showDescription={false}
                 showAuthor={false}
                 isEdit={false}
+                onRemove={removeFromUI}
               />
 
-              <button
+              {/* <button
                 className="rbt-btn btn-border radius-round mt-2"
                 onClick={() => removeFromWishlist(course.courseId)}
               >
                 Remove from wishlist
-              </button>
+              </button> */}
             </div>
           ))}
         </div>

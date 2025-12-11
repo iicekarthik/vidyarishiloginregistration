@@ -10,14 +10,19 @@ export const authMiddleware = (handler) => {
     const accessToken = cookies.accessToken;
     const refreshToken = cookies.refreshToken;
 
+    // Pehle attempt: access token verify karne ki koshish.
+    // Agar valid → user mil jayega.
     let user = accessToken ? verifyAccessToken(accessToken) : null;
 
+    // Refresh token verify karo.
+    // Agar wo bhi invalid → user NOT authenticated.
     if (!user && refreshToken) {
       const payload = await verifyRefreshToken(refreshToken);
       if (!payload) {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
+      // Naya access token create ho gaya
       const newAccess = generateAccessToken({ _id: payload.id });
 
       res.setHeader(

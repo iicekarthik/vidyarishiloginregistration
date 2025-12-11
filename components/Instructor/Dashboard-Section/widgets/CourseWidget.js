@@ -3,7 +3,6 @@ import Link from "next/link";
 import Image from "next/image";
 import api from "@/vidyarishiapi/lib/axios";
 
-
 const CourseWidget = ({
   data,
   courseStyle,
@@ -12,63 +11,84 @@ const CourseWidget = ({
   isProgress,
   isCompleted,
   isEdit,
+  onRemove, // NEW — Parent passes this only on Wishlist page
 }) => {
+
   const [discountPercentage, setDiscountPercentage] = useState("");
   const [totalReviews, setTotalReviews] = useState("");
   const [rating, setRating] = useState("");
+  const [isWishlisted, setIsWishlisted] = useState(false);
 
   const progressValue = data.progress ?? data.progressValue ?? 0;
 
-  const getDiscountPercentage = () => {
-    if (!data.offerPrice || !data.coursePrice) return;
-    const discount = data.coursePrice - data.offerPrice;
-    const percentage = (discount / data.coursePrice) * 100;
-    setDiscountPercentage(percentage.toFixed(0));
-  };
-
-  const getTotalReviews = () => {
-    if (!data.reviews) return setTotalReviews(0);
-
-    const r = data.reviews;
-    const total =
-      (r.oneStar || 0) +
-      (r.twoStar || 0) +
-      (r.threeStar || 0) +
-      (r.fourStar || 0) +
-      (r.fiveStar || 0);
-
-    setTotalReviews(total);
-  };
-
-  const getRating = () => {
-    if (!data.rating?.average) return setRating(0);
-    setRating(data.rating.average.toFixed(0));
-  };
-
+  // Review, Rating, Discount
   useEffect(() => {
-    getDiscountPercentage();
-    getTotalReviews();
-    getRating();
+    if (data.offerPrice && data.coursePrice) {
+      const discount = data.coursePrice - data.offerPrice;
+      const percentage = (discount / data.coursePrice) * 100;
+      setDiscountPercentage(percentage.toFixed(0));
+    }
+
+    if (data.reviews) {
+      const r = data.reviews;
+      const total =
+        (r.oneStar || 0) +
+        (r.twoStar || 0) +
+        (r.threeStar || 0) +
+        (r.fourStar || 0) +
+        (r.fiveStar || 0);
+      setTotalReviews(total);
+    }
+
+    if (data.rating?.average) {
+      setRating(data.rating.average.toFixed(0));
+    }
   }, []);
 
-  // API ACTIONS
+  // Detect if Already Wishlisted
+  useEffect(() => {
+    if (data.isWishlisted || data.fromWishlist) {
+      setIsWishlisted(true);
+    }
+  }, [data]);
 
-  const handleBuyCourse = async () => {
+  // Wishlist Toggle (Add / Remove)
+  const toggleWishlist = async () => {
+    const courseId = data.id || data.courseId;
+
     try {
-      const res = await api.post("/api/dashboard/student/enroll", {
-        courseId: data.id || data.courseId,
-        title: data.title,
-        description: data.shortDescription,
-      });
+      if (isWishlisted) {
+        // REMOVE from wishlist
+        await api.delete("/api/dashboard/wishlist", {
+          data: { courseId },
+        });
 
+        setIsWishlisted(false);
 
-      alert("Successfully Enrolled!");
-      window.location.reload();
+        // Auto-remove from Wishlist UI
+        if (onRemove) onRemove(courseId);
+
+      } else {
+        // ADD to wishlist
+        await api.post("/api/dashboard/wishlist", {
+          courseId,
+          title: data.title,
+          description: data.description || "",
+          meta: {
+            thumbnail: data.courseThumbnail,
+            price: data.offerPrice,
+          }
+        });
+
+        setIsWishlisted(true);
+      }
+
     } catch (err) {
-      alert(err.response?.data?.message || "Enrollment failed");
+      console.error("Wishlist toggle failed:", err);
     }
   };
 
+  // Update Progress (Enrolled Page)
   const handleProgressUpdate = async () => {
     try {
       const newProgress = Math.min(100, progressValue + 10);
@@ -78,7 +98,6 @@ const CourseWidget = ({
         status: newProgress === 100 ? "completed" : "active",
       });
 
-
       alert("Progress updated!");
       window.location.reload();
     } catch (err) {
@@ -86,20 +105,10 @@ const CourseWidget = ({
     }
   };
 
-  const handleDeleteCourse = async () => {
-    if (!confirm("Remove this course?")) return;
-
-    try {
-      await api.delete(`/api/dashboard/student/enrolled-courses/${data._id}`);
-      alert("Course removed!");
-      window.location.reload();
-    } catch (err) {
-      alert(err.response?.data?.message || "Remove failed");
-    }
-  };
-
+  //                              UI START
   return (
     <div className="rbt-card variation-01 rbt-hover">
+
       {/* IMAGE */}
       <div className="rbt-card-img">
         <Link href={`/course-details/${data.id || data.courseId}`}>
@@ -109,6 +118,8 @@ const CourseWidget = ({
             src={data.courseThumbnail}
             alt={data.title}
           />
+
+          {/* DISCOUNT BADGE */}
           {discountPercentage && (
             <div className="rbt-badge-3 bg-white">
               <span>-{discountPercentage}%</span>
@@ -119,17 +130,35 @@ const CourseWidget = ({
       </div>
 
       <div className="rbt-card-body">
-        {/* TITLE + RATING */}
+
+        {/* TOP SECTION */}
         {courseStyle === "two" && (
           <>
             <div className="rbt-card-top">
+
+              {/* Rating */}
               <div className="rbt-review">
                 <div className="rating">
                   {Array.from({ length: rating }, (_, i) => (
-                    <i key={i} className="fas fa-star" />
+                    <i className="fas fa-star" key={i} />
                   ))}
                 </div>
                 <span className="rating-count">({totalReviews} Reviews)</span>
+              </div>
+
+              {/* BOOKMARK BUTTON */}
+              <div className="rbt-bookmark-btn">
+                <button
+                  className="rbt-round-btn"
+                  title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+                  onClick={toggleWishlist}
+                >
+                  {isWishlisted ? (
+                    <i className="fas fa-bookmark" /> // filled
+                  ) : (
+                    <i className="feather-bookmark" /> // outline
+                  )}
+                </button>
               </div>
             </div>
 
@@ -141,7 +170,7 @@ const CourseWidget = ({
           </>
         )}
 
-        {/* META */}
+        {/* META INFO */}
         <ul className="rbt-meta">
           <li>
             <i className="feather-book" /> {data.lectures || 0} Lessons
@@ -151,7 +180,7 @@ const CourseWidget = ({
           </li>
         </ul>
 
-        {/* PROGRESS MODE (ENROLLED COURSES VIEW) */}
+        {/* PROGRESS AREA */}
         {isProgress ? (
           <>
             <div className="rbt-progress-style-1 mb--20 mt--10">
@@ -170,7 +199,7 @@ const CourseWidget = ({
               </div>
             </div>
 
-            {/* ACTIONS */}
+            {/* COMPLETED → CERTIFICATE BUTTON */}
             <div className="rbt-card-bottom">
               {progressValue === 100 ? (
                 <a
@@ -187,34 +216,22 @@ const CourseWidget = ({
                   +10% Progress
                 </button>
               )}
-
-              <button
-                className="rbt-btn btn-sm bg-danger-opacity w-100 text-center mt-2"
-                onClick={handleDeleteCourse}
-              >
-                Remove Course
-              </button>
             </div>
           </>
         ) : (
-          /* COURSE CARD MODE (CATALOG VIEW) */
+          // NORMAL COURSE CARD (NON-PROGRESS)
           <div className="rbt-card-bottom">
             <div className="rbt-price">
               <span className="current-price">${data.offerPrice}</span>
               <span className="off-price">${data.coursePrice}</span>
             </div>
 
-            {!isEdit ? (
-              <button className="rbt-btn-link" onClick={handleBuyCourse}>
-                Buy Course <i className="feather-arrow-right" />
-              </button>
-            ) : (
-              <Link className="rbt-btn-link left-icon" href="#">
-                <i className="feather-edit"></i> Edit
-              </Link>
-            )}
+            <Link className="rbt-btn-link" href="#">
+              Learn More <i className="feather-arrow-right" />
+            </Link>
           </div>
         )}
+
       </div>
     </div>
   );

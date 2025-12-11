@@ -1,4 +1,5 @@
 // vidyarishiapi/utils/errorHandler.js
+// API errors ko handle karta hai
 import AppError from "./AppError";
 
 export const errorHandler = (fn) => {

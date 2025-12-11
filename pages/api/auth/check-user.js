@@ -5,6 +5,19 @@ import User from "@/vidyarishiapi/models/User";
 import { isValidPhone } from "@/vidyarishiapi/utils/validators";
 import { createOtp } from "@/vidyarishiapi/services/otp.service";
 
+
+// 1️⃣ Frontend phone number send karta hai
+// 2️⃣ Backend check karta hai number valid hai
+// 3️⃣ Database check karta hai user exist karta hai ya nahi
+// 4️⃣ OTP generate + send hota hai
+// 5️⃣ Returns:
+
+// User exist → exists: true
+
+// New user → exists: false
+
+// 6️⃣ Frontend next step OTP screen open karta hai
+
 async function handler(req, res) {
   if (req.method !== "POST") throw new AppError("Only POST allowed", 405);
 

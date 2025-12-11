@@ -1,9 +1,7 @@
-"use client";
-
+// "use client";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-
 
 const Setting = () => {
   const [user, setUser] = useState(null);
@@ -16,12 +14,13 @@ const Setting = () => {
     github: "",
   });
   const [loading, setLoading] = useState(true);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingSocial, setSavingSocial] = useState(false);
 
-  // Fetch user on mount
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch("/api/dashboard/profileroute", {
+        const res = await fetch("/api/dashboard/profile/profileroute", {
           method: "GET",
           credentials: "include",
         });
@@ -34,7 +33,6 @@ const Setting = () => {
           return;
         }
 
-        // restore values
         setUser({
           ...data,
           skill: data.skill || "",
@@ -42,7 +40,6 @@ const Setting = () => {
         });
 
         setBio(data.biography || "");
-
         setSocialLinks({
           facebook: data.facebook || "",
           twitter: data.twitter || "",
@@ -50,7 +47,6 @@ const Setting = () => {
           website: data.website || "",
           github: data.github || "",
         });
-
       } catch (err) {
         console.error("Fetch user error:", err);
       } finally {
@@ -61,64 +57,115 @@ const Setting = () => {
     fetchUser();
   }, []);
 
+  // helper: robust name splitting
+  const splitName = (fullName = "") => {
+    const parts = (fullName || "").trim().split(/\s+/);
+    const firstName = parts[0] || "";
+    const lastName = parts.slice(1).join(" ") || "";
+    return { firstName, lastName };
+  };
 
-  // Update profile (name, phone, bio, skill)
+  // helper: validate phone (basic Indian 10-digit)
+  const isValidPhone = (p) => {
+    if (!p) return true; // allow empty
+    return /^[0-9]{10}$/.test(p);
+  };
+
+  // helper: basic safe url check
+  const isSafeUrl = (value) => {
+    if (!value) return true; // allow empty
+    try {
+      const u = new URL(value);
+      return u.protocol === "http:" || u.protocol === "https:";
+    } catch {
+      return false;
+    }
+  };
+
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     if (!user) return;
 
-    const [firstName = "", lastName = ""] = (user.fullName || "").split(" ");
+    const { firstName, lastName } = splitName(user.fullName || "");
+    // Validate phone
+    if (!isValidPhone(user.phone)) {
+      alert("Phone number must be 10 digits (numbers only).");
+      return;
+    }
 
+    const payload = {};
+    // only include fields that actually changed / present
+    if (firstName) payload.firstName = firstName;
+    if (lastName) payload.lastName = lastName;
+    if (user.phone !== undefined) payload.phone = user.phone;
+    if (user.skill !== undefined) payload.skill = user.skill;
+    if (bio !== undefined) payload.biography = bio;
+
+    if (Object.keys(payload).length === 0) {
+      alert("No changes to save.");
+      return;
+    }
+
+    setSavingProfile(true);
     try {
-      const res = await fetch("/api/dashboard/update-profile", {
+      const res = await fetch("/api/dashboard/profile/update-profile-info", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName,
-          lastName,
-          phone: user.phone,
-          skill: user.skill,
-          biography: bio,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
 
-      if (data.status === "success") {
+      if (res.ok && data.status === "success") {
         setUser({
           ...data.user,
           skill: data.user.skill || "",
           biography: data.user.biography || "",
         });
-
         setBio(data.user.biography || "");
         alert("Profile updated successfully!");
       } else {
-        alert(data.message || "Update failed");
+        alert(data.message || data.error || "Update failed");
       }
     } catch (err) {
       console.error(err);
       alert("Update failed");
+    } finally {
+      setSavingProfile(false);
     }
   };
 
-
-  // Update social links
   const handleUpdateSocial = async (e) => {
     e.preventDefault();
 
+    // Validate urls
+    for (const key of Object.keys(socialLinks)) {
+      if (!isSafeUrl(socialLinks[key])) {
+        alert(`${key} must be a valid URL starting with http:// or https://`);
+        return;
+      }
+    }
+
+    // only send fields that are provided (allow empty strings to clear)
+    const payload = {};
+    for (const key of Object.keys(socialLinks)) {
+      // include even empty string (user may want to clear), but skip undefined
+      if (socialLinks[key] !== undefined) payload[key] = socialLinks[key];
+    }
+
+    setSavingSocial(true);
     try {
-      const res = await fetch("/api/dashboard/update-profile", {
+      const res = await fetch("/api/dashboard/profile/update-profile-social", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(socialLinks),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
 
-      if (data.status === "success") {
+      if (res.ok && data.status === "success") {
         setSocialLinks({
           facebook: data.user?.facebook || "",
           twitter: data.user?.twitter || "",
@@ -126,14 +173,15 @@ const Setting = () => {
           website: data.user?.website || "",
           github: data.user?.github || "",
         });
-
         alert("Social links updated successfully!");
       } else {
-        alert(data.message || "Update failed");
+        alert(data.message || data.error || "Update failed");
       }
     } catch (err) {
       console.error(err);
-      alert("Update failed");
+      alert("Something went wrong");
+    } finally {
+      setSavingSocial(false);
     }
   };
 
@@ -141,7 +189,7 @@ const Setting = () => {
   if (!user)
     return <p className="rbt-dashboard-content bg-color-white rbt-shadow-box p-3">Please login to edit settings.</p>;
 
-  const [firstName = "", lastName = ""] = (user.fullName || "").split(" ");
+  const { firstName, lastName } = splitName(user.fullName || "");
 
   return (
     <div className="rbt-dashboard-content bg-color-white rbt-shadow-box">
@@ -150,39 +198,16 @@ const Setting = () => {
           <h4 className="rbt-title-style-3">Settings</h4>
         </div>
 
-        {/* ---- Tabs ---- */}
         <div className="advance-tab-button mb--30">
-          <ul
-            className="nav nav-tabs tab-button-style-2 justify-content-start"
-            id="settinsTab-4"
-            role="tablist"
-          >
+          <ul className="nav nav-tabs tab-button-style-2 justify-content-start" id="settinsTab-4" role="tablist">
             <li role="presentation">
-              <Link
-                href="#"
-                className="tab-button active"
-                id="profile-tab"
-                data-bs-toggle="tab"
-                data-bs-target="#profile"
-                role="tab"
-                aria-controls="profile"
-                aria-selected="true"
-              >
+              <Link href="#" className="tab-button active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" role="tab" aria-controls="profile" aria-selected="true">
                 <span className="title">Profile</span>
               </Link>
             </li>
 
             <li role="presentation">
-              <Link
-                href="#"
-                className="tab-button"
-                id="social-tab"
-                data-bs-toggle="tab"
-                data-bs-target="#social"
-                role="tab"
-                aria-controls="social"
-                aria-selected="false"
-              >
+              <Link href="#" className="tab-button" id="social-tab" data-bs-toggle="tab" data-bs-target="#social" role="tab" aria-controls="social" aria-selected="false">
                 <span className="title">Social Share</span>
               </Link>
             </li>
@@ -190,25 +215,13 @@ const Setting = () => {
         </div>
 
         <div className="tab-content">
-          {/* PROFILE TAB */}
-          <div
-            className="tab-pane fade active show"
-            id="profile"
-            role="tabpanel"
-            aria-labelledby="profile-tab"
-          >
-            {/* Cover & Avatar block (like your design) */}
+          <div className="tab-pane fade active show" id="profile" role="tabpanel" aria-labelledby="profile-tab">
             <div className="rbt-dashboard-content-wrapper">
               <div className="tutor-bg-photo bg_image bg_image--23 height-245"></div>
               <div className="rbt-tutor-information">
                 <div className="rbt-tutor-information-left">
                   <div className="thumbnail rbt-avatars size-lg position-relative">
-                    <Image
-                      width={200} //300
-                      height={150} //300
-                      src="/images/team/avatar-2.jpg"
-                      alt="Instructor"
-                    />
+                    <Image width={200} height={150} src="/images/team/avatar-2.jpg" alt="Instructor" />
                     <div className="rbt-edit-photo-inner">
                       <button className="rbt-edit-photo" title="Upload Photo" type="button">
                         <i className="feather-camera" />
@@ -218,10 +231,7 @@ const Setting = () => {
                 </div>
                 <div className="rbt-tutor-information-right">
                   <div className="tutor-btn">
-                    <Link
-                      className="rbt-btn btn-sm btn-border color-white radius-round-10"
-                      href="#"
-                    >
+                    <Link className="rbt-btn btn-sm btn-border color-white radius-round-10" href="#">
                       Edit Cover Photo
                     </Link>
                   </div>
@@ -229,125 +239,61 @@ const Setting = () => {
               </div>
             </div>
 
-            {/* Profile form */}
-            <form
-              className="rbt-profile-row rbt-default-form row row--15"
-              onSubmit={handleUpdateProfile}
-            >
+            <form className="rbt-profile-row rbt-default-form row row--15" onSubmit={handleUpdateProfile}>
               <div className="col-lg-6 col-md-6 col-sm-6 col-12">
                 <div className="rbt-form-group">
                   <label htmlFor="firstname">First Name</label>
-                  <input
-                    id="firstname"
-                    type="text"
-                    value={firstName}
-                    onChange={(e) =>
-                      setUser((prev) => ({
-                        ...prev,
-                        fullName: `${e.target.value} ${lastName}`.trim(),
-                      }))
-                    }
-                  />
+                  <input id="firstname" type="text" value={firstName} onChange={(e) => setUser((prev) => ({ ...prev, fullName: `${e.target.value} ${lastName}`.trim() }))} />
                 </div>
               </div>
 
               <div className="col-lg-6 col-md-6 col-sm-6 col-12">
                 <div className="rbt-form-group">
                   <label htmlFor="lastname">Last Name</label>
-                  <input
-                    id="lastname"
-                    type="text"
-                    value={lastName}
-                    onChange={(e) =>
-                      setUser((prev) => ({
-                        ...prev,
-                        fullName: `${firstName} ${e.target.value}`.trim(),
-                      }))
-                    }
-                  />
+                  <input id="lastname" type="text" value={lastName} onChange={(e) => setUser((prev) => ({ ...prev, fullName: `${firstName} ${e.target.value}`.trim() }))} />
                 </div>
               </div>
 
               <div className="col-lg-6 col-md-6 col-sm-6 col-12">
                 <div className="rbt-form-group">
                   <label htmlFor="username">User Name</label>
-                  <input
-                    id="username"
-                    type="text"
-                    value={user.username || ""}
-                    onChange={(e) =>
-                      setUser((prev) => ({ ...prev, username: e.target.value }))
-                    }
-                  />
+                  <input id="username" type="text" value={user.username || ""} onChange={(e) => setUser((prev) => ({ ...prev, username: e.target.value }))} />
                 </div>
               </div>
 
               <div className="col-lg-6 col-md-6 col-sm-6 col-12">
                 <div className="rbt-form-group">
                   <label htmlFor="phonenumber">Phone Number</label>
-                  <input
-                    id="phonenumber"
-                    type="tel"
-                    value={user.phone || ""}
-                    onChange={(e) =>
-                      setUser((prev) => ({ ...prev, phone: e.target.value }))
-                    }
-                  />
+                  <input id="phonenumber" type="tel" value={user.phone || ""} onChange={(e) => setUser((prev) => ({ ...prev, phone: e.target.value }))} />
                 </div>
               </div>
 
               <div className="col-lg-6 col-md-6 col-sm-6 col-12">
                 <div className="rbt-form-group">
                   <label htmlFor="skill">Skill/Occupation</label>
-                  <input
-                    id="skill"
-                    type="text"
-                    value={user?.skill ?? ""}
-                    onChange={(e) =>
-                      setUser((prev) => ({
-                        ...prev,
-                        skill: e.target.value,
-                      }))
-                    }
-                  />
-
+                  <input id="skill" type="text" value={user?.skill ?? ""} onChange={(e) => setUser((prev) => ({ ...prev, skill: e.target.value }))} />
                 </div>
               </div>
 
               <div className="col-12">
                 <div className="rbt-form-group">
                   <label htmlFor="bio">Bio</label>
-                  <textarea
-                    id="bio"
-                    cols={20}
-                    rows={5}
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                  />
+                  <textarea id="bio" cols={20} rows={5} value={bio} onChange={(e) => setBio(e.target.value)} />
                 </div>
               </div>
 
               <div className="col-12 mt--20">
                 <div className="rbt-form-group">
-                  <button type="submit" className="rbt-btn btn-gradient">
-                    Update Info
+                  <button type="submit" className="rbt-btn btn-gradient" disabled={savingProfile}>
+                    {savingProfile ? "Saving..." : "Update Info"}
                   </button>
                 </div>
               </div>
             </form>
           </div>
 
-          {/* SOCIAL TAB */}
-          <div
-            className="tab-pane fade"
-            id="social"
-            role="tabpanel"
-            aria-labelledby="social-tab"
-          >
-            <form
-              className="rbt-profile-row rbt-default-form row row--15"
-              onSubmit={handleUpdateSocial}
-            >
+          <div className="tab-pane fade" id="social" role="tabpanel" aria-labelledby="social-tab">
+            <form className="rbt-profile-row rbt-default-form row row--15" onSubmit={handleUpdateSocial}>
               {["facebook", "twitter", "linkedin", "website", "github"].map((key) => (
                 <div className="col-12" key={key}>
                   <div className="rbt-form-group">
@@ -356,35 +302,22 @@ const Setting = () => {
                       {key === "twitter" && <i className="feather-twitter"></i>}
                       {key === "linkedin" && <i className="feather-linkedin"></i>}
                       {key === "website" && <i className="feather-globe"></i>}
-                      {key === "github" && <i className="feather-github"></i>}{" "}
-                      {key.charAt(0).toUpperCase() + key.slice(1)}
+                      {key === "github" && <i className="feather-github"></i>} {key.charAt(0).toUpperCase() + key.slice(1)}
                     </label>
-                    <input
-                      id={key}
-                      type="text"
-                      placeholder={`https://${key}.com/`}
-                      value={socialLinks[key]}
-                      onChange={(e) =>
-                        setSocialLinks((prev) => ({
-                          ...prev,
-                          [key]: e.target.value,
-                        }))
-                      }
-                    />
+                    <input id={key} type="text" placeholder={`https://${key}.com/`} value={socialLinks[key]} onChange={(e) => setSocialLinks((prev) => ({ ...prev, [key]: e.target.value }))} />
                   </div>
                 </div>
               ))}
 
               <div className="col-12 mt--10">
                 <div className="rbt-form-group">
-                  <button type="submit" className="rbt-btn btn-gradient">
-                    Update Profile
+                  <button type="submit" className="rbt-btn btn-gradient" disabled={savingSocial}>
+                    {savingSocial ? "Saving..." : "Update Social Links"}
                   </button>
                 </div>
               </div>
             </form>
           </div>
-          {/* end social tab */}
         </div>
       </div>
     </div>

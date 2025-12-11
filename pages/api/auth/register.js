@@ -57,6 +57,7 @@ async function handler(req, res) {
     city,
     course,
     whatsapp,
+    isPhoneNumberVerified: true,
   });
 
   // Generate tokens
