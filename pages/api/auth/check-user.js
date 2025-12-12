@@ -29,8 +29,12 @@ async function handler(req, res) {
   const user = await User.findOne({ phone });
 
   await createOtp(phone);
+  return res.status(200).json({
+    exists: !!user,
+    otpSent: true,
+    message: "OTP sent successfully",
+  });
 
-  return res.status(200).json({ exists: !!user, otpSent: true });
 }
 
 

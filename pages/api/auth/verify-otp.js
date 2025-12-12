@@ -28,10 +28,14 @@ async function handler(req, res) {
   }
 
   await dbConnect();
-
+  
+  // 🔥 NEW: Check OTP using new validation system (attempts, expiry, lock)
   const result = await checkOtp(phone, otp);
-  if (!result.success) throw new AppError("OTP validation failed", 400);
 
+  if (!result.success) {
+    // Return specific failure message (invalid, expired, locked, or attempts left)
+    throw new AppError(result.msg || "OTP validation failed", 400);
+  }
   const user = await User.findOne({ phone });
 
   // LOGIN FLOW

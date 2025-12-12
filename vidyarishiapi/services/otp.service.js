@@ -1,39 +1,84 @@
-import otpStore from "@/vidyarishiapi/store/otp.store"
+import otpStore from "@/vidyarishiapi/store/otp.store";
 import { sendSMS } from "./sms.service";
 import otpGenerator from "otp-generator";
 
+const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_ATTEMPTS = 5;
+
 export const createOtp = async (phone) => {
+  // Generate OTP
   const otp = String(Math.floor(1000 + Math.random() * 9000));
 
-//   const otp = otpGenerator.generate(4, {
-//   digits: true,
-//   alphabets: false,
-//   upperCase: false,
-//   specialChars: false,
-// });
+  // const otp = otpGenerator.generate(4, {
+  //   digits: true,
+  //   alphabets: false,
+  //   upperCase: false,
+  //   specialChars: false,
+  // });
 
-  const expiresAt = Date.now() + 30 * 1000; 
+  // Remove any old OTP first
+  otpStore.delete(phone);
 
-// OTP memory store me save ho gaya
-  otpStore.set(phone, { otp, expiresAt });
+  const expiresAt = Date.now() + OTP_EXPIRY_MS;
 
+  // Save OTP with attempt counter
+  otpStore.set(phone, {
+    otp,
+    expiresAt,
+    attempts: 0,
+    locked: false,
+  });
+
+  // Send SMS
   await sendSMS(phone, `Your VidyaRishi OTP is ${otp}`);
 
   return otp;
 };
 
+
+
 export const checkOtp = async (phone, otp) => {
   const record = otpStore.get(phone);
-  if (!record) return { success: false, msg: "OTP not found" };
 
-  if (Date.now() > record.expiresAt) {
-    otpStore.delete(phone);
-    return { success: false, msg: "OTP expired" };
+  // No OTP record found
+  if (!record) {
+    return { success: false, msg: "OTP not found, request a new one" };
   }
 
-  // OTP memory store me save ho gaya
-  if (record.otp !== otp) return { success: false, msg: "OTP invalid" };
+  // OTP locked due to max attempts
+  if (record.locked) {
+    return { success: false, msg: "Too many attempts. OTP locked." };
+  }
 
-  otpStore.delete(phone); 
+  // Expired OTP
+  if (Date.now() > record.expiresAt) {
+    otpStore.delete(phone);
+    return { success: false, msg: "OTP expired. Request a new one." };
+  }
+
+  // Incorrect OTP
+  if (record.otp !== otp) {
+    record.attempts += 1;
+
+    // Lock OTP if max attempts exceeded
+    if (record.attempts >= MAX_ATTEMPTS) {
+      record.locked = true;
+      otpStore.set(phone, record);
+
+      return { success: false, msg: "Too many attempts. OTP locked." };
+    }
+
+    otpStore.set(phone, record);
+    return {
+      success: false,
+      msg: `Incorrect OTP. Attempts left: ${
+        MAX_ATTEMPTS - record.attempts
+      }`,
+    };
+  }
+
+  // Correct OTP → delete record
+  otpStore.delete(phone);
+
   return { success: true };
 };
