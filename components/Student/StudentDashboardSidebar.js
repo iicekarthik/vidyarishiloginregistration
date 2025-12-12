@@ -12,7 +12,7 @@ const StudentDashboardSidebar = () => {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await axios.get("/api/dashboard/profileroute", {
+        const res = await axios.get("/api/dashboard/profile/profileroute", {
           withCredentials: true,
         });
 

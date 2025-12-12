@@ -4,7 +4,7 @@ const userSchema = new mongoose.Schema(
   {
     phone: { type: String, required: true, unique: true },
     fullName: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
+    email: { type: String, required: true, unique: true, lowercase: true},
 
     dob: { type: Date },
     gender: { type: String },
@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema(
     whatsapp: { type: Boolean, default: false },
 
     skill: { type: String},
-    biography: { type: String },
+    biography: { type: String, trim: true, maxlength: 500 },
 
     facebook: { type: String },
     twitter: { type: String },

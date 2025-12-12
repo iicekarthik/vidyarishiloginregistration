@@ -23,7 +23,7 @@ async function handler(req, res) {
 
   const courses = await EnrolledCourse.find({ userId }).sort({
     createdAt: -1,
-  });
+  });        //DB query: is user ke sabhi enrolled records laao, naya se pehle (descending createdAt)
 
   return res.status(200).json(courses);
 }

@@ -57,6 +57,8 @@ const LoginRegisterForm = ({ buttonName = "Continue", Inputheight = 50, InputFon
 
     IsCurrentStep,
     setIsCurrentStep,
+    user,
+    setUser
   } = useAppContext();
 
   const [fullName, setFullName] = useState("");
@@ -134,25 +136,25 @@ const LoginRegisterForm = ({ buttonName = "Continue", Inputheight = 50, InputFon
     setIsPhoneNumber(val);
   };
 
- const handlePhoneSubmit = async (e) => {
-  e.preventDefault();
+  const handlePhoneSubmit = async (e) => {
+    e.preventDefault();
 
-  if (!IsPhoneNumber || IsPhoneNumber.length !== 10) {
-    alert("Enter valid 10-digit phone number");
-    return;
-  }
+    if (!IsPhoneNumber || IsPhoneNumber.length !== 10) {
+      alert("Enter valid 10-digit phone number");
+      return;
+    }
 
-  const result = await checkUserAPI(IsPhoneNumber);
+    const result = await checkUserAPI(IsPhoneNumber);
 
-  if (result?.error) {
-    alert("Something went wrong. Try again.");
-    return;
-  }
+    if (result?.error) {
+      alert("Something went wrong. Try again.");
+      return;
+    }
 
-  setIsUserExist(result.exists);
-  setIsCurrentStep(2);
-  startTimer();
-};
+    setIsUserExist(result.exists);
+    setIsCurrentStep(2);
+    startTimer();
+  };
 
 
   // OTP handlers
@@ -168,36 +170,37 @@ const LoginRegisterForm = ({ buttonName = "Continue", Inputheight = 50, InputFon
     if (!value && index > 0) otpRefs[index - 1].current?.focus();
   };
 
-const handleVerifyOtp = async () => {
-  const enteredOtp = otpValues.current.join("");
-  if (enteredOtp.length !== 4) {
-    alert("Enter 4-digit OTP");
-    return;
-  }
+  const handleVerifyOtp = async () => {
+    const enteredOtp = otpValues.current.join("");
+    if (enteredOtp.length !== 4) {
+      alert("Enter 4-digit OTP");
+      return;
+    }
 
-  const result = await verifyOtpAPI(IsPhoneNumber, enteredOtp);
+    const result = await verifyOtpAPI(IsPhoneNumber, enteredOtp);
 
-  if (result?.status === "login_success") {
-    // JWT is automatically stored in authapi.js inside verifyOtpAPI
-    router.push("/dashboard");
-    return;
-  }
+    setUser(result.user);
+    if (result?.status === "login_success") {
+      // JWT is automatically stored in authapi.js inside verifyOtpAPI
+      router.push("/dashboard");
+      return;
+    }
 
-  if (result?.status === "continue_registration") {
-    setIsCurrentStep(3);
-    return;
-  }
+    if (result?.status === "continue_registration") {
+      setIsCurrentStep(3);
+      return;
+    }
 
-  // Invalid OTP → Shake effect
-  const el = document.querySelector("." + styles.otpRow);
-  if (el) {
-    el.classList.remove(styles.shake);
-    void el.offsetWidth;
-    el.classList.add(styles.shake);
-  }
+    // Invalid OTP → Shake effect
+    const el = document.querySelector("." + styles.otpRow);
+    if (el) {
+      el.classList.remove(styles.shake);
+      void el.offsetWidth;
+      el.classList.add(styles.shake);
+    }
 
-  alert(result?.message || "Invalid OTP");
-};
+    alert(result?.message || "Invalid OTP");
+  };
 
 
   const resendOtp = async () => {
@@ -218,32 +221,32 @@ const handleVerifyOtp = async () => {
     setIsCurrentStep(4);
   };
 
-const handleRegisterSubmit = async (e) => {
-  e.preventDefault();
+  const handleRegisterSubmit = async (e) => {
+    e.preventDefault();
 
-  const data = {
-    phone: IsPhoneNumber,
-    fullName,
-    email,
-    dob,
-    gender,
-    qualification,
-    state,
-    city,
-    course,
-    whatsapp,
+    const data = {
+      phone: IsPhoneNumber,
+      fullName,
+      email,
+      dob,
+      gender,
+      qualification,
+      state,
+      city,
+      course,
+      whatsapp,
+    };
+
+    const res = await registerUserAPI(data);
+    setUser(result.user);
+    if (res?.status === "success") {
+      // JWT auto-saved inside registerUserAPI
+      router.push("/dashboard");
+      return;
+    }
+
+    alert(res?.message || "Registration failed");
   };
-
-  const res = await registerUserAPI(data);
-
-  if (res?.status === "success") {
-    // JWT auto-saved inside registerUserAPI
-    router.push("/dashboard");
-    return;
-  }
-
-  alert(res?.message || "Registration failed");
-};
 
 
   return (

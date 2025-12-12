@@ -19,25 +19,25 @@ async function handler(req, res) {
 
   const course = await EnrolledCourse.findOne({ userId, courseId });
   if (!course) throw new AppError("Not enrolled in this course", 404);
-  if (course.progress < 100)
+  if (course.progress < 100)       //Progress must be 100 (ya desired threshold) to allow certificate. Else 403
     throw new AppError("Complete the course to download certificate", 403);
 
-  const doc = new PDFDocument();
-  res.setHeader("Content-Type", "application/pdf");
+  const doc = new PDFDocument();     //PDF document create.
+  res.setHeader("Content-Type", "application/pdf");   //header tells browser it's a PDF.
   res.setHeader(
-    "Content-Disposition",
-    `attachment; filename="certificate-${courseId}.pdf"`
+    "Content-Disposition",          
+    `attachment; filename="certificate-${courseId}.pdf"`  //makes browser download it as a file (with given filename).
   );
 
-  doc.pipe(res);
+  doc.pipe(res); //pdfkit stream ko response ke saath pipe kar diya — iska matlab jo PDF generate hota hai woh directly client ko stream hot
 
   doc.fontSize(30).text("Certificate of Completion", { align: "center" });
-  doc.moveDown();
+  doc.moveDown();   //nserts vertical spacing.
   doc.fontSize(18).text(`This certifies the completion of`, { align: "center" });
   doc.moveDown();
   doc.fontSize(24).text(course.title, { align: "center" });
 
-  doc.end();
+  doc.end();  //PDF generation finish kar do — stream close.
 }
 
 export default errorHandler(handler);

@@ -581,3 +581,17 @@
     flex-direction: row;
   }
 }
+
+/* Fix dropdown click issue */
+.header-right,
+.account-access,
+.rbt-button-group {
+  overflow: visible !important;
+  position: relative !important;
+  z-index: inherit !important;
+}
+
+.profile-dropdown {
+  pointer-events: auto !important;
+  overflow: visible !important;
+}

@@ -8,6 +8,7 @@ import Nav from "../Nav";
 import { useEffect, useState } from "react";
 import PopupForm from "@/components/PopupForm/PopupForm";
 import AuthenticationPopup from "@/components/Authentication/AuthenticationPopup";
+import UserProfileButton from "@/components/Authentication/UserProfileButton";
 
 const HeaderRightTwo = ({ btnClass, btnText, userType }) => {
   const {
@@ -25,12 +26,36 @@ const HeaderRightTwo = ({ btnClass, btnText, userType }) => {
     setIsOpenLoginModal,
     IsPhoneNumber,
     setIsPhoneNumber,
+    user,
+    setUser
   } = useAppContext();
 
   const { total_items } = useSelector((state) => state.CartReducer);
 
   useEffect(() => {
     setIsOpen(false);
+
+    const fetchUser = async () => {
+      try {
+        const res = await fetch("/api/dashboard/profile/profileroute", {
+          credentials: "include",
+        });
+
+        if (!res.ok) {
+          setUser(null);
+          return;
+        }
+
+        const data = await res.json();
+        setUser(data);
+      } catch (err) {
+        console.log("Profile load failed");
+        setUser(null);
+      }
+
+    };
+
+    fetchUser();
   }, [IsOpenLoginModal]);
 
   return (
@@ -62,15 +87,18 @@ const HeaderRightTwo = ({ btnClass, btnText, userType }) => {
         {/* Login/Register */}
         <li>
           <div className="rbt-button-group">
-            <button
-              className="rbt-btn3 btn-gradient"
-              style={{
-                marginLeft: "24px",
-              }}
-              onClick={() => setIsOpenLoginModal(true)}
-            >
-              Sign Up
-            </button>
+            {user ? (
+              <UserProfileButton user={user} />
+            ) : (
+              <button
+                className="rbt-btn3 btn-gradient"
+                style={{ marginLeft: "24px" }}
+                onClick={() => setIsOpenLoginModal(true)}
+              >
+                Sign Up
+              </button>
+            )}
+
           </div>
         </li>
       </ul>

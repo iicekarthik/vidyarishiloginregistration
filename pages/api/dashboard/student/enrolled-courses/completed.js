@@ -24,7 +24,7 @@ async function handler(req, res) {
   const courses = await EnrolledCourse.find({
     userId,
     status: "completed",
-  }).sort({ createdAt: -1 });
+  }).sort({ createdAt: -1 });     //Completed courses laao
 
   return res.status(200).json(courses);
 }

@@ -49,7 +49,7 @@ async function handler(req, res) {
 
   // Unauthorized
   if (!userPayload?.id) {
-    throw new AppError("Unauthorized", 401);   //Means access token+refresh token dono fail → user=logged out
+    return res.status(401).json({ user: null });   //Means access token+refresh token dono fail → user=logged out
   }
 
   // Fetch user from database

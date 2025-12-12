@@ -27,7 +27,7 @@ export const authMiddleware = (handler) => {
 
       res.setHeader(
         "Set-Cookie",
-        `accessToken=${newAccess}; Max-Age=1200; Path=/; HttpOnly; SameSite=Strict`
+        `accessToken=${newAccess}; Max-Age=1200; Path=/; HttpOnly; SameSite=None; Secure`
       );
 
       user = { id: payload.id };

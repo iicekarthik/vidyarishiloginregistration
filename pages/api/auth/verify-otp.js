@@ -12,13 +12,11 @@ import AppError from "@/vidyarishiapi/lib/AppError";
 const isProd = process.env.NODE_ENV === "production";
 
 const accessTokenCookie = token =>
-  `accessToken=${token}; Max-Age=1200; HttpOnly; Path=/; ${
-    isProd ? "SameSite=None; Secure" : "SameSite=Lax"
+  `accessToken=${token}; Max-Age=1200; HttpOnly; Path=/; ${isProd ? "SameSite=None; Secure" : "SameSite=Lax"
   }`;
 
 const refreshTokenCookie = token =>
-  `refreshToken=${token}; Max-Age=604800; HttpOnly; Path=/; ${
-    isProd ? "SameSite=None; Secure" : "SameSite=Lax"
+  `refreshToken=${token}; Max-Age=604800; HttpOnly; Path=/; ${isProd ? "SameSite=None; Secure" : "SameSite=Lax"
   }`;
 
 async function handler(req, res) {
@@ -38,8 +36,17 @@ async function handler(req, res) {
 
   // LOGIN FLOW
   if (user) {
-    const accessToken = generateAccessToken(user);
-    const refreshToken = await generateRefreshToken(user);
+
+    if (!user.isPhoneNumberVerified) {
+      user.isPhoneNumberVerified = true;
+      await user.save();
+    }
+
+    // ⭐ Reload updated user
+    const updatedUser = await User.findById(user._id);
+
+    const accessToken = generateAccessToken(updatedUser);
+    const refreshToken = await generateRefreshToken(updatedUser);
 
     res.setHeader("Set-Cookie", [
       accessTokenCookie(accessToken),
@@ -49,7 +56,7 @@ async function handler(req, res) {
     return res.status(200).json({
       status: "login_success",
       isUserExist: true,
-      user,
+      user: updatedUser,
     });
   }
 

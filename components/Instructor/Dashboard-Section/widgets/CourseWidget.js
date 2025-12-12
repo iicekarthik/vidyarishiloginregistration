@@ -11,7 +11,8 @@ const CourseWidget = ({
   isProgress,
   isCompleted,
   isEdit,
-  onRemove, // NEW — Parent passes this only on Wishlist page
+  onRemove,                // optional (Wishlist page)
+  onProgressUpdated,       // NEW → Callback for progress update
 }) => {
 
   const [discountPercentage, setDiscountPercentage] = useState("");
@@ -19,9 +20,12 @@ const CourseWidget = ({
   const [rating, setRating] = useState("");
   const [isWishlisted, setIsWishlisted] = useState(false);
 
-  const progressValue = data.progress ?? data.progressValue ?? 0;
+  // LOCAL progress state (so UI updates instantly)
+  const [progressValue, setProgressValue] = useState(
+    data.progress ?? data.progressValue ?? 0
+  );
 
-  // Review, Rating, Discount
+  // DISCOUNT / REVIEWS / RATING 
   useEffect(() => {
     if (data.offerPrice && data.coursePrice) {
       const discount = data.coursePrice - data.offerPrice;
@@ -45,20 +49,20 @@ const CourseWidget = ({
     }
   }, []);
 
-  // Detect if Already Wishlisted
+  //  WISHLIST SYNC 
   useEffect(() => {
     if (data.isWishlisted || data.fromWishlist) {
       setIsWishlisted(true);
     }
   }, [data]);
 
-  // Wishlist Toggle (Add / Remove)
+  //  WISHLIST TOGGLE
   const toggleWishlist = async () => {
     const courseId = data.id || data.courseId;
 
     try {
       if (isWishlisted) {
-        // REMOVE from wishlist
+        // Remove from wishlist
         await api.delete("/api/dashboard/wishlist", {
           data: { courseId },
         });
@@ -69,7 +73,7 @@ const CourseWidget = ({
         if (onRemove) onRemove(courseId);
 
       } else {
-        // ADD to wishlist
+        // Add to wishlist
         await api.post("/api/dashboard/wishlist", {
           courseId,
           title: data.title,
@@ -88,24 +92,34 @@ const CourseWidget = ({
     }
   };
 
-  // Update Progress (Enrolled Page)
+  //  PROGRESS UPDATE (NO RELOAD 🔥) 
   const handleProgressUpdate = async () => {
     try {
       const newProgress = Math.min(100, progressValue + 10);
 
-      await api.put(`/api/dashboard/student/enrolled-courses/${data._id}`, {
-        progress: newProgress,
-        status: newProgress === 100 ? "completed" : "active",
-      });
+      const response = await api.put(
+        `/api/dashboard/student/enrolled-courses/${data._id}`,
+        {
+          progress: newProgress,
+          status: newProgress === 100 ? "completed" : "active",
+        }
+      );
+
+      // Update UI instantly
+      setProgressValue(response.data.progress);
+
+      // Notify parent to re-fetch courses
+      if (onProgressUpdated) onProgressUpdated();
 
       alert("Progress updated!");
-      window.location.reload();
+
     } catch (err) {
       alert(err.response?.data?.message || "Progress update failed");
     }
   };
 
-  //                              UI START
+
+  //  UI START 
   return (
     <div className="rbt-card variation-01 rbt-hover">
 
@@ -180,6 +194,7 @@ const CourseWidget = ({
           </li>
         </ul>
 
+
         {/* PROGRESS AREA */}
         {isProgress ? (
           <>
@@ -212,6 +227,7 @@ const CourseWidget = ({
                 <button
                   className="rbt-btn btn-sm bg-success-opacity w-100 text-center"
                   onClick={handleProgressUpdate}
+                  type="button"
                 >
                   +10% Progress
                 </button>
@@ -219,7 +235,6 @@ const CourseWidget = ({
             </div>
           </>
         ) : (
-          // NORMAL COURSE CARD (NON-PROGRESS)
           <div className="rbt-card-bottom">
             <div className="rbt-price">
               <span className="current-price">${data.offerPrice}</span>

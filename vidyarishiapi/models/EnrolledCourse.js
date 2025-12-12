@@ -5,8 +5,8 @@ const EnrolledCourseSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true, // now required
-    },
+      required: true, 
+    },            //Kaun user ne course join kiya — ye store hota hai
 
     courseId: { type: String, required: true },
     title: { type: String, required: true },

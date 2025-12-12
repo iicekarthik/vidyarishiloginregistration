@@ -1,28 +1,38 @@
 import Image from "next/image";
 import Link from "next/link";
 import axios from "axios";
-import { getAuthToken } from "@/vidyarishiapi/utils/authapi";
 import { useEffect, useState } from "react";
 
 const StudentDashboardHeader = () => {
   const [studentName, setStudentName] = useState("");
+  const [enrolledCount, setEnrolledCount] = useState(0);
+  const [certificateCount, setCertificateCount] = useState(0);
 
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchUserAndCounts = async () => {
       try {
-        const res = await axios.get("/api/dashboard/profileroute", {
+        const userRes = await axios.get("/api/dashboard/profile/profileroute", {
+          withCredentials: true,
+        });
+        setStudentName(userRes.data.fullName || "User");
+
+        const courseRes = await axios.get("/api/dashboard/student/enrolled-courses", {
           withCredentials: true,
         });
 
+        const courses = Array.isArray(courseRes.data) ? courseRes.data : [];
 
-        setStudentName(res.data.fullName || "User");
+        setEnrolledCount(courses.filter(c => c.status === "enrolled").length);
+        setCertificateCount(courses.filter(c => c.status === "completed").length);
+
       } catch (error) {
-        console.log("Error fetching user:", error);
+        console.log("Error:", error);
       }
     };
 
-    fetchUser();
+    fetchUserAndCounts();
   }, []);
+
 
   return (
     <>
@@ -30,23 +40,27 @@ const StudentDashboardHeader = () => {
         <div className="tutor-bg-photo bg_image bg_image--22 height-350" />
         <div className="rbt-tutor-information">
           <div className="rbt-tutor-information-left">
-            {/* <div className="thumbnail rbt-avatars size-lg">
+            <div className="thumbnail rbt-avatars size-lg">
               <Image
-                width={300}
-                height={300}
+                width={250}  //300
+                height={130}  //300
                 src="/images/team/avatar.jpg"
                 alt="Instructor"
               />
-            </div> */}
+            </div>
             <div className="tutor-content">
               <h5 className="title">{studentName}</h5>
               <ul className="rbt-meta rbt-meta-white mt--5">
                 <li>
-                  <i className="feather-book"></i>5 Courses Enroled
+                  <i className="feather-book"></i>
+                  {enrolledCount} Courses Enrolled
                 </li>
+
                 <li>
-                  <i className="feather-award"></i>4 Certificate
+                  <i className="feather-award"></i>
+                  {certificateCount} Certificate
                 </li>
+
               </ul>
             </div>
           </div>

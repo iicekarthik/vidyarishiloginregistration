@@ -24,7 +24,7 @@ async function handler(req, res) {
   const courses = await EnrolledCourse.find({
     userId,
     status: "enrolled",
-  }).sort({ createdAt: -1 });
+  }).sort({ createdAt: -1 });       //Sirf un records ko laata jo status: "enrolled" hain
 
   return res.status(200).json(courses);
 }

@@ -24,7 +24,7 @@ async function handler(req, res) {
   const courses = await EnrolledCourse.find({
     userId,
     status: "active",
-  }).sort({ createdAt: -1 });
+  }).sort({ createdAt: -1 });       //Active status wale courses fetch.
 
   return res.status(200).json(courses);
 }
