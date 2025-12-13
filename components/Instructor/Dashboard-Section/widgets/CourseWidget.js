@@ -78,10 +78,11 @@ const CourseWidget = ({
           courseId,
           title: data.title,
           description: data.description || "",
+          coursePrice: data.coursePrice,
+          offerPrice: data.offerPrice,
           meta: {
-            thumbnail: data.courseThumbnail,
-            price: data.offerPrice,
-          }
+            thumbnail: data.meta?.thumbnail,
+          },
         });
 
         setIsWishlisted(true);
@@ -118,6 +119,10 @@ const CourseWidget = ({
     }
   };
 
+  const thumbnail =
+    data.meta?.thumbnail
+      ? `/${data.meta.thumbnail}`
+      : "/images/course/default-course.jpg";
 
   //  UI START 
   return (
@@ -125,15 +130,15 @@ const CourseWidget = ({
 
       {/* IMAGE */}
       <div className="rbt-card-img">
-        <Link href={`/course-details/${data.id || data.courseId}`}>
+        {/* <Link href={`/course-details/${data.id || data.courseId}`}> */}
+        <Link href={thumbnail}>
           <Image
             width={330}
             height={227}
-            src={data.courseThumbnail}
+            src={thumbnail}
             alt={data.title}
           />
 
-          {/* DISCOUNT BADGE */}
           {discountPercentage && (
             <div className="rbt-badge-3 bg-white">
               <span>-{discountPercentage}%</span>
@@ -166,14 +171,18 @@ const CourseWidget = ({
                   className="rbt-round-btn"
                   title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
                   onClick={toggleWishlist}
+                  style={{
+                    color: isWishlisted ? "#000" : "#6b6b6b",
+                  }}
                 >
                   {isWishlisted ? (
-                    <i className="fas fa-bookmark" /> // filled
+                    <i className="fas fa-bookmark" />   // filled icon
                   ) : (
-                    <i className="feather-bookmark" /> // outline
+                    <i className="feather-bookmark" /> // outline icon
                   )}
                 </button>
               </div>
+
             </div>
 
             <h4 className="rbt-card-title">

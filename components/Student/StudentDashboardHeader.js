@@ -64,7 +64,7 @@ const StudentDashboardHeader = () => {
               </ul>
             </div>
           </div>
-          <div className="rbt-tutor-information-right">
+          {/* <div className="rbt-tutor-information-right">
             <div className="tutor-btn">
               <Link className="rbt-btn btn-md hover-icon-reverse" href="#">
                 <span className="icon-reverse-wrapper">
@@ -78,7 +78,7 @@ const StudentDashboardHeader = () => {
                 </span>
               </Link>
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </>

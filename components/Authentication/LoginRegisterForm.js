@@ -238,7 +238,7 @@ const LoginRegisterForm = ({ buttonName = "Continue", Inputheight = 50, InputFon
     };
 
     const res = await registerUserAPI(data);
-    setUser(result.user);
+    setUser(res.user);
     if (res?.status === "success") {
       // JWT auto-saved inside registerUserAPI
       router.push("/dashboard");
@@ -256,7 +256,7 @@ const LoginRegisterForm = ({ buttonName = "Continue", Inputheight = 50, InputFon
           <div>
             <h3 className={styles.title}>Welcome to VidyaRishi</h3>
             <p className={styles.subtitle}>
-              {IsCurrentStep === 1 && "Enter your mobile number"}
+              {IsCurrentStep === 1 && "Enter your phone number"}
               {IsCurrentStep === 2 && "We sent an OTP to your phone"}
               {IsCurrentStep === 3 && "Choose a course"}
               {IsCurrentStep === 4 && "Complete your registration"}

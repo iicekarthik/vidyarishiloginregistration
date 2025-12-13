@@ -1,4 +1,5 @@
 "use client";
+import { formatCourseNameFromJSON } from "../../utils/courseFormatter";
 
 const Profile = ({ user }) => {
   return (
@@ -19,7 +20,10 @@ const Profile = ({ user }) => {
             <ProfileRow label="Qualification" value={user.qualification || "N/A"} />
             <ProfileRow label="State" value={user.state || "N/A"} />
             <ProfileRow label="City" value={user.city || "N/A"} />
-            <ProfileRow label="Course" value={user.course || "N/A"} />
+            <ProfileRow
+              label="Course"
+              value={formatCourseNameFromJSON(user.course)}
+            />
             <ProfileRow label="Skill/Occupation" value={user.skill || "N/A"} />
             <ProfileRow label="Biography" value={user.biography || "N/A"} />
           </>
